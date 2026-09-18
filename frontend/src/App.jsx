@@ -25,6 +25,7 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import FileTree from "./components/FileTree";
 import buildFileTree from "./utils/buildFileTree";
 import Sidebar from "./components/Sidebar";
+import ChatMessage from "./components/ChatMessage";
 
 export default function App() {
   const { session, loading: authLoading } = useAuth();
@@ -192,6 +193,7 @@ const res = await api.post("/api/upload-repo", {
             display: "flex",
             flexDirection: "column",
             height: "100%",
+            
           }}
         >
           <Box
@@ -217,91 +219,12 @@ const res = await api.post("/api/upload-repo", {
             }}
           >
             {messages.map((msg, i) => (
-              <Box
-                key={i}
-                sx={{
-                  alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                  maxWidth: "70%",
-                }}
-              >
-                <Paper sx={{ p: 2, borderRadius: 3 }}>
-                  <Box
-                    sx={{
-                      fontSize: "15px",
-                      lineHeight: 1.7,
-                      color: "#0f172a",
-                      "& p": { margin: "6px 0" },
-                      "& code": {
-                        backgroundColor: "#e2e8f0",
-                        padding: "2px 4px",
-                        borderRadius: "4px",
-                        fontSize: "13px",
-                      },
-                      "& pre": {
-                        backgroundColor: "#0f172a",
-                        color: "white",
-                        padding: "12px",
-                        borderRadius: "8px",
-                        overflowX: "auto",
-                      },
-                      "& h1, & h2, & h3": {
-                        margin: "10px 0 6px",
-                      },
-                    }}
-                  >
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {msg.text}
-                    </ReactMarkdown>
-                  </Box>
-
-                  {/* SOURCES */}
-                  {msg.sources?.length > 0 && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography sx={{ fontSize: "12px", color: "gray" }}>
-                        Files:
-                      </Typography>
-
-                      {msg.sources.map((s, idx) => (
-                        <Box key={idx} sx={{ mt: 1 }}>
-                          {/* FILE NAME */}
-                          <Typography
-                            sx={{
-                              fontSize: "14px",
-                              color: "black",
-                              mb: 0.5,
-                            }}
-                          >
-                            📄 {s.file}
-                          </Typography>
-
-                          {/* FUNCTION (CLICKABLE TEXT) */}
-                          <Typography
-                            onClick={() =>
-                              setSelectedCode({
-                                file: s.file,
-                                name: `Lines ${s.startLine}-${s.endLine}`,
-                                code: s.code,
-                              })
-                            }
-                            sx={{
-                              fontSize: "14px",
-                              ml: 3,
-                              color: "#60a5fa",
-                              cursor: "pointer",
-                              fontWeight: 400,
-                              display: "inline-block",
-                              textDecoration: "underline",
-                            }}
-                          >
-                            Lines : {s.startLine}-{s.endLine}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
-                </Paper>
-              </Box>
-            ))}
+  <ChatMessage
+    key={i}
+    msg={msg}
+    setSelectedCode={setSelectedCode}
+  />
+))}
             {loading && <CircularProgress size={20} />}
           </Box>
 
