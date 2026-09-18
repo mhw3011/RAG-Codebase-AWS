@@ -13,6 +13,7 @@ router.get("/files/:sessionId", async (req, res) => {
     .from("code_chunks")
     .select("file_path, code, start_line")
     .eq("session_id", sessionId)
+     .eq("user_id", req.user.id)
     .order("start_line", { ascending: true });
 
   if (error) {

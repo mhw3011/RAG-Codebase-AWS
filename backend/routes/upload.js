@@ -1,9 +1,7 @@
 import express from "express";
-import { cloneRepo } from "../services/gitService.js";
-import { getAllFiles } from "../utils/fileReader.js";
-import { extractCodeChunks } from "../services/parserService.js";
-import { getEmbedding } from "../services/embeddingService.js";
-import { supabase } from "../services/supabaseClient.js";
+import { v4 as uuidv4 } from "uuid";
+import { sendProcessingJob } from "../services/sqsService.js";
+import { createUserSupabaseClient } from "../services/supabaseUserClient.js";
 
 const router = express.Router();
 
@@ -12,77 +10,80 @@ router.post("/upload-repo", async (req, res) => {
     const { repoUrl } = req.body;
 
     if (!repoUrl) {
-      return res.status(400).json({ error: "repoUrl is required" });
+      return res.status(400).json({
+        error: "repoUrl is required",
+      });
     }
 
-    // 1. Clone repo
-    const { sessionId, repoPath } = await cloneRepo(repoUrl);
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    const supabase = createUserSupabaseClient(token);
 
-    // 2. Get all files
-    const files = getAllFiles(repoPath);
+    const sessionId = uuidv4();
 
-    let allChunks = [];
+    // Create job record
+    const { error: dbError } = await supabase
+      .from("processing_jobs")
+      .insert({
+        session_id: sessionId,
+        status: "queued",
+	user_id: req.user.id,
+      });
 
-    // 3. Extract chunks
-    for (const file of files) {
-      let chunks = [];
+    if (dbError) {
+      console.error("Job creation error:", dbError);
 
-      try {
-        chunks = extractCodeChunks(file);
-      } catch (err) {
-        console.error("Chunk extraction failed:", file);
-        continue;
-      }
-
-      const enrichedChunks = chunks.map((chunk) => ({
-        ...chunk,
-        filePath: file,
-        sessionId,
-      }));
-
-      allChunks.push(...enrichedChunks);
+      return res.status(500).json({
+        error: "Failed to create processing job",
+      });
     }
 
-    console.log(`Total chunks extracted: ${allChunks.length}`);
-
-    // 4. Generate embeddings + store in DB
-    let successCount = 0;
-
-    for (const chunk of allChunks) {
-      try {
-        const embedding = await getEmbedding(chunk.code);
-
-        const { error } = await supabase.from("code_chunks").insert({
-          session_id: chunk.sessionId,
-          file_path: chunk.filePath,
-          type: chunk.type,
-          name: chunk.name,
-          code: chunk.code,
-          start_line: chunk.startLine,
-          end_line: chunk.endLine,
-          embedding: embedding,
-        });
-
-        if (error) {
-          console.error("DB Insert Error:", error.message);
-        } else {
-          successCount++;
-        }
-      } catch (err) {
-        console.error("Embedding Error:", err.message);
-      }
-    }
-
-    // 5. Final response
-    res.json({
-      message: "Repo processed and stored",
+    // Send job to SQS
+    await sendProcessingJob({
+      repoUrl,
       sessionId,
-      totalChunks: allChunks.length,
-      storedChunks: successCount,
+      userId: req.user.id,
+    });
+
+    return res.json({
+      message: "Repository processing queued",
+      sessionId,
     });
   } catch (err) {
-    console.error("Upload Error:", err);
-    res.status(500).json({ error: "Failed to process repo" });
+    console.error("Queue Error:", err);
+
+    return res.status(500).json({
+      error: "Failed to queue repository",
+    });
+  }
+});
+
+router.get("/status/:sessionId", async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    const supabase = createUserSupabaseClient(token);
+
+    const { data, error } = await supabase
+      .from("processing_jobs")
+      .select("status, error")
+      .eq("session_id", sessionId)
+      .eq("user_id", req.user.id)
+      .single();
+
+    if (error) {
+      return res.status(500).json({
+        error: "Failed to fetch job status",
+      });
+    }
+
+    return res.json(data);
+  } catch (err) {
+    console.error("Status Error:", err);
+
+    return res.status(500).json({
+      error: "Failed to fetch job status",
+    });
   }
 });
 

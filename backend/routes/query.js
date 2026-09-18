@@ -17,22 +17,52 @@ const cleanFilePath = (path = "") =>
 router.post("/query", async (req, res) => {
   try {
     const { question, sessionId } = req.body;
-
+    console.log("Query session:", sessionId);
     if (!question || !sessionId) {
       return res.status(400).json({
         error: "missing input",
       });
     }
 
+const { data: job, error: jobError } = await supabase
+  .from("processing_jobs")
+  .select("session_id")
+  .eq("session_id", sessionId)
+  .eq("user_id", req.user.id)
+  .single();
+
+if (jobError || !job) {
+  return res.status(403).json({
+    error: "You do not have access to this repository",
+  });
+}
+
     // generate query embedding
+    console.time("Embedding");
+
     const queryEmbedding = await getEmbedding(question);
 
+    console.timeEnd("Embedding");
+
+    console.time("Supabase simple query");
+
+    await supabase
+  .from("code_chunks")
+  .select("id")
+  .limit(1);
+
+console.timeEnd("Supabase simple query");
+
     // semantic retrieval
+    console.time("Supabase search");
+
     const { data: chunks, error } = await supabase.rpc("match_code_chunks", {
       query_embedding: queryEmbedding,
       match_count: 6,
       session_filter: sessionId,
     });
+    
+    console.timeEnd("Supabase search");
 
     if (error) {
       return res.status(500).json({
@@ -61,6 +91,9 @@ ${c.code}
       .join("\n\n---\n\n");
 
     // ask LLM
+
+    console.time("GPT");
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -102,6 +135,8 @@ ${question}
         },
       ],
     });
+
+console.timeEnd("GPT");
 
     let raw = completion.choices[0].message.content;
 

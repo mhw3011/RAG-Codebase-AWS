@@ -12,12 +12,16 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1127.0",
+    "@aws-sdk/client-sqs": "^3.1128.0",
+    "@aws-sdk/client-ssm": "^3.1127.0",
     "@babel/parser": "^7.29.3",
     "@supabase/supabase-js": "^2.105.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "fs-extra": "^11.3.4",
+    "jose": "^6.2.12",
     "openai": "^6.36.0",
     "simple-git": "^3.36.0",
     "uuid": "^14.0.0"

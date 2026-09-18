@@ -1,6 +1,8 @@
 const API_URL = import.meta.env.VITE_API_URL;
 import { useState, useRef, useEffect } from "react";
-import axios from "axios";
+import { api } from "./api";
+import Auth from "./Auth";
+import { useAuth } from "./AuthContext";
 
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
@@ -10,6 +12,8 @@ import Paper from "@mui/material/Paper";
 import CircularProgress from "@mui/material/CircularProgress";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+import { supabase } from "./lib/supabaseClient";
 
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -22,6 +26,7 @@ import FileTree from "./components/FileTree";
 import buildFileTree from "./utils/buildFileTree";
 
 export default function App() {
+  const { session, loading: authLoading } = useAuth();
   const [repoUrl, setRepoUrl] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [question, setQuestion] = useState("");
@@ -36,29 +41,79 @@ export default function App() {
   const chatRef = useRef();
 
   useEffect(() => {
+    if (!session) {
+      setRepoUrl("");
+      setSessionId("");
+      setQuestion("");
+      setMessages([]);
+      setLoading(false);
+      setUploadStatus("idle");
+      setSelectedCode(null);
+      setFiles([]);
+    }
+  }, [session]);
+
+  useEffect(() => {
     chatRef.current?.scrollTo(0, chatRef.current.scrollHeight);
   }, [messages]);
 
+    if (authLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!session) {
+    return <Auth />;
+  }
+
   const handleUpload = async () => {
-    try {
-      setUploadStatus("loading");
+  try {
+    setUploadStatus("loading");
 
-      const res = await axios.post(`${API_URL}/api/upload-repo`, {
-        repoUrl,
-      });
+const res = await api.post("/api/upload-repo", {
+      repoUrl,
+    });
 
-      const id = res.data.sessionId;
-      setSessionId(id);
+    const id = res.data.sessionId;
+    setSessionId(id);
 
-      const filesRes = await axios.get(`${API_URL}/api/files/${id}`);
-      setFiles(filesRes.data);
+    let attempts = 0;
 
-      setUploadStatus("done");
-    } catch (err) {
-      console.error(err);
-      setUploadStatus("idle");
+    while (attempts < 60) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const statusRes = await api.get(
+        `${API_URL}/api/status/${id}`
+      );
+
+      const status = statusRes.data.status;
+
+      console.log("Processing status:", status);
+
+      if (status === "completed") {
+        const filesRes = await api.get(
+          `${API_URL}/api/files/${id}`
+        );
+
+        setFiles(filesRes.data);
+        setUploadStatus("done");
+        return;
+      }
+
+      if (status === "failed") {
+        throw new Error(
+          statusRes.data.error || "Repository processing failed"
+        );
+      }
+
+      attempts++;
     }
-  };
+
+    throw new Error("Repository processing timed out");
+  } catch (err) {
+    console.error(err);
+    setUploadStatus("idle");
+  }
+};
 
   const handleAsk = async () => {
     if (!question) return;
@@ -67,7 +122,7 @@ export default function App() {
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API_URL}/api/query`, {
+	const res = await api.post("/api/query", {
         sessionId,
         question,
       });
@@ -105,6 +160,7 @@ export default function App() {
     return "javascript";
   };
 
+
   return (
     <Box sx={{ display: "flex", height: "100vh" }}>
       {/* SIDEBAR */}
@@ -121,6 +177,18 @@ export default function App() {
         <Typography variant="h6" sx={{ mb: 3 }}>
           Codebase AI
         </Typography>
+
+	<Typography
+  variant="caption"
+  sx={{
+    color: "#94a3b8",
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    mb: 1,
+  }}
+>
+  REPOSITORY
+</Typography>
 
         <TextField
           size="small"
@@ -150,7 +218,26 @@ export default function App() {
           )}
         </Button>
 
-        <Box sx={{ mt: 3, overflow: "auto", flex: 1 }}>
+	<Typography
+  variant="caption"
+  sx={{
+    color: "#94a3b8",
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+  }}
+>
+  FILES
+</Typography>
+
+	<Box
+	  sx={{
+	    mt: 2,
+	    pt: 1.5,
+	    borderTop: "1px solid #334155",
+	    overflow: "auto",
+	    flex: 1,
+	  }}
+	>
           <FileTree
             tree={fileTree}
             onSelect={(file) =>
@@ -162,6 +249,76 @@ export default function App() {
             }
           />
         </Box>
+	<Box
+  sx={{
+    mt: 2,
+    pt: 2,
+    borderTop: "1px solid #334155",
+  }}
+>
+<Box
+  sx={{
+    display: "flex",
+    alignItems: "center",
+    gap: 1.5,
+  }}
+>
+  <Box
+    sx={{
+      width: 32,
+      height: 32,
+      borderRadius: "50%",
+      backgroundColor: "#3b82f6",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "14px",
+      fontWeight: 600,
+      flexShrink: 0,
+    }}
+  >
+    {session?.user?.email?.charAt(0).toUpperCase()}
+  </Box>
+
+  <Typography
+    variant="body2"
+    sx={{
+      color: "#e2e8f0",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    }}
+  >
+    {session?.user?.email}
+  </Typography>
+</Box>
+
+  <Typography
+    variant="caption"
+    sx={{ color: "#94a3b8" }}
+  >
+    Signed in
+  </Typography>
+
+  <Button
+    fullWidth
+    variant="outlined"
+    onClick={async () => {
+      setSessionId(null);
+      await supabase.auth.signOut();
+    }}
+    sx={{
+      color: "white",
+      borderColor: "#475569",
+      mt: 1.5,
+      "&:hover": {
+        borderColor: "#94a3b8",
+      },
+    }}
+  >
+    Logout
+  </Button>
+</Box>
       </Box>
 
       {/* CHAT */}

@@ -13,3 +13,14 @@ export const getEmbedding = async (text) => {
 
   return response.data[0].embedding;
 };
+
+export const getEmbeddings = async (texts) => {
+  const response = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: texts,
+  });
+
+  return response.data
+    .sort((a, b) => a.index - b.index)
+    .map((item) => item.embedding);
+};
