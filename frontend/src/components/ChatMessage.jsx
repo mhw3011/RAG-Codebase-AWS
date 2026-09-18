@@ -7,7 +7,7 @@ function ChatMessage({ msg, setSelectedCode }) {
     <Box
       sx={{
         alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-        maxWidth: "70%",
+        maxWidth: "min(800px, 90%)",
       }}
     >
       <Paper sx={{ p: 2, borderRadius: 3 }}>
@@ -35,9 +35,7 @@ function ChatMessage({ msg, setSelectedCode }) {
             },
           }}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {msg.text}
-          </ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
         </Box>
 
         {msg.sources?.length > 0 && (

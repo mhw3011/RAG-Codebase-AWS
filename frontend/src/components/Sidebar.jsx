@@ -63,11 +63,9 @@ function Sidebar({
         onClick={handleUpload}
         disabled={uploadStatus === "loading"}
         sx={{
-          backgroundColor:
-            uploadStatus === "done" ? "#22c55e" : "#3b82f6",
+          backgroundColor: uploadStatus === "done" ? "#22c55e" : "#3b82f6",
           "&:hover": {
-            backgroundColor:
-              uploadStatus === "done" ? "#16a34a" : "#2563eb",
+            backgroundColor: uploadStatus === "done" ? "#16a34a" : "#2563eb",
           },
         }}
       >
@@ -157,10 +155,7 @@ function Sidebar({
           </Typography>
         </Box>
 
-        <Typography
-          variant="caption"
-          sx={{ color: "#94a3b8" }}
-        >
+        <Typography variant="caption" sx={{ color: "#94a3b8" }}>
           Signed in
         </Typography>
 
