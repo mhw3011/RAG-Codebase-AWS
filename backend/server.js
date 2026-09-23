@@ -12,7 +12,11 @@ const { default: filesRoute } = await import("./routes/files.js");
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://main.d1j71r2hhqttrr.amplifyapp.com",
+  })
+);
 app.use(express.json());
 
 app.use("/api",requireAuth, uploadRoute);
