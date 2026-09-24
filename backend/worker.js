@@ -22,7 +22,8 @@ const sqs = new SQSClient({
   region: "ap-south-1",
 });
 
-const QUEUE_URL = "https://sqs.ap-south-1.amazonaws.com/042522012026/codebase-rag-processing";
+const QUEUE_URL =
+  "https://sqs.ap-south-1.amazonaws.com/042522012026/codebase-rag-processing";
 
 async function receiveJob() {
   const command = new ReceiveMessageCommand({
@@ -133,35 +134,41 @@ async function startWorker() {
       console.log(`Total chunks extracted: ${allChunks.length}`);
 
       // Generate embeddings and store chunks
-const texts = allChunks.map((chunk) => chunk.code);
+      const validChunks = allChunks.filter(
+        (chunk) => chunk.code && chunk.code.trim().length > 0,
+      );
 
-console.log("Generating embeddings...");
+      console.log(`Valid chunks: ${validChunks.length}/${allChunks.length}`);
 
-const embeddings = await getEmbeddings(texts);
+      const texts = validChunks.map((chunk) => chunk.code);
 
-console.log(`Generated embeddings: ${embeddings.length}`);
+      console.log("Generating embeddings...");
 
-const rows = allChunks.map((chunk, index) => ({
-  session_id: chunk.sessionId,
-  user_id: job.userId,
-  file_path: chunk.filePath,
-  type: chunk.type,
-  name: chunk.name,
-  code: chunk.code,
-  start_line: chunk.startLine,
-  end_line: chunk.endLine,
-  embedding: embeddings[index],
-}));
+      const embeddings = await getEmbeddings(texts);
 
-const { error: insertError } = await supabaseAdmin
-  .from("code_chunks")
-  .insert(rows);
+      console.log(`Generated embeddings: ${embeddings.length}`);
 
-if (insertError) {
-  throw insertError;
-}
+      const rows = validChunks.map((chunk, index) => ({
+        session_id: chunk.sessionId,
+        user_id: job.userId,
+        file_path: chunk.filePath,
+        type: chunk.type,
+        name: chunk.name,
+        code: chunk.code,
+        start_line: chunk.startLine,
+        end_line: chunk.endLine,
+        embedding: embeddings[index],
+      }));
 
-console.log(`Stored chunks: ${rows.length}/${allChunks.length}`);
+      const { error: insertError } = await supabaseAdmin
+        .from("code_chunks")
+        .insert(rows);
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      console.log(`Stored chunks: ${rows.length}/${allChunks.length}`);
 
       // Remove local repository
       await fs.promises.rm(repoPath, {
@@ -212,6 +219,6 @@ console.log(`Stored chunks: ${rows.length}/${allChunks.length}`);
       console.log("Job marked as failed");
     }
   }
-} 
+}
 
 startWorker();
