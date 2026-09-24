@@ -4,6 +4,7 @@ import {
   TextField,
   Button,
   CircularProgress,
+  Drawer,
 } from "@mui/material";
 
 import FileTree from "./FileTree";
@@ -18,11 +19,15 @@ function Sidebar({
   session,
   setSessionId,
   supabase,
+  mobileOpen,
+  onClose,
 }) {
-  return (
+  const sidebarContent = (
     <Box
       sx={{
         width: "260px",
+        height: "100%",
+        boxSizing: "border-box",
         backgroundColor: "#0f172a",
         color: "white",
         p: 3,
@@ -101,13 +106,15 @@ function Sidebar({
       >
         <FileTree
           tree={fileTree}
-          onSelect={(file) =>
+          onSelect={(file) => {
             setSelectedCode({
               file: file.file_path,
               name: file.file_path?.split("/").pop(),
               code: file.code || "",
-            })
-          }
+            });
+
+            onClose?.();
+          }}
         />
       </Box>
 
@@ -179,6 +186,31 @@ function Sidebar({
         </Button>
       </Box>
     </Box>
+  );
+
+  return (
+    <>
+      <Box
+        sx={{
+          display: { xs: "none", md: "flex" },
+          height: "100vh",
+          flexShrink: 0,
+        }}
+      >
+        {sidebarContent}
+      </Box>
+
+      <Drawer
+        anchor="left"
+        open={mobileOpen}
+        onClose={onClose}
+        sx={{
+          display: { xs: "block", md: "none" },
+        }}
+      >
+        {sidebarContent}
+      </Drawer>
+    </>
   );
 }
 

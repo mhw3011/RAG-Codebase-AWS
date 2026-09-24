@@ -33,15 +33,14 @@ export default function Auth() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-
-        <div className="auth-logo">&lt;/&gt;</div>
-
-        <h1>CodeBase RAG</h1>
+        <img
+          className="auth-logo"
+          src="/codebase-rag-logoWithText.png"
+          alt="CodeBase RAG"
+        />
 
         <p className="auth-subtitle">
-          {isSignup
-            ? "Create your account"
-            : "Sign in to your account"}
+          {isSignup ? "Create your account" : "Sign in to your account"}
         </p>
 
         <div className="auth-tabs">
@@ -67,7 +66,6 @@ export default function Auth() {
         </div>
 
         <form onSubmit={handleSubmit}>
-
           <label>Email</label>
           <input
             type="email"
@@ -87,30 +85,15 @@ export default function Auth() {
             required
           />
 
-          {message && (
-            <div className="auth-message">
-              {message}
-            </div>
-          )}
+          {message && <div className="auth-message">{message}</div>}
 
-          <button
-            className="auth-submit"
-            type="submit"
-            disabled={loading}
-          >
-            {loading
-              ? "Please wait..."
-              : isSignup
-                ? "Create Account"
-                : "Login"}
+          <button className="auth-submit" type="submit" disabled={loading}>
+            {loading ? "Please wait..." : isSignup ? "Create Account" : "Login"}
           </button>
-
         </form>
 
         <p className="auth-switch">
-          {isSignup
-            ? "Already have an account?"
-            : "Don't have an account?"}
+          {isSignup ? "Already have an account?" : "Don't have an account?"}
 
           <button
             onClick={() => {
@@ -121,7 +104,6 @@ export default function Auth() {
             {isSignup ? "Login" : "Sign Up"}
           </button>
         </p>
-
       </div>
     </div>
   );

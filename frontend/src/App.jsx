@@ -5,10 +5,9 @@ import Auth from "./Auth";
 import { useAuth } from "./AuthContext";
 
 import Box from "@mui/material/Box";
-
 import Typography from "@mui/material/Typography";
-
 import CircularProgress from "@mui/material/CircularProgress";
+import Button from "@mui/material/Button";
 
 import { supabase } from "./lib/supabaseClient";
 
@@ -30,6 +29,7 @@ export default function App() {
 
   const [selectedCode, setSelectedCode] = useState(null);
   const [files, setFiles] = useState([]);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const fileTree = buildFileTree(files);
   const chatRef = useRef();
@@ -72,7 +72,7 @@ export default function App() {
 
       let attempts = 0;
 
-      while (attempts < 60) {
+      while (attempts < 180) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         const statusRes = await api.get(`${API_URL}/api/status/${id}`);
@@ -162,6 +162,8 @@ export default function App() {
         session={session}
         setSessionId={setSessionId}
         supabase={supabase}
+        mobileOpen={mobileOpen}
+        onClose={() => setMobileOpen(false)}
       />
 
       {/* CHAT */}
@@ -184,12 +186,40 @@ export default function App() {
         >
           <Box
             sx={{
-              p: 2,
+              px: 2,
+              py: 0.5,
               backgroundColor: "white",
               borderBottom: "1px solid #ddd",
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
             }}
           >
-            <Typography variant="h6">Ask your codebase</Typography>
+            <Button
+              onClick={() => setMobileOpen(true)}
+              sx={{
+                display: { xs: "flex", md: "none" },
+                minWidth: 40,
+                fontSize: "24px",
+                color: "#0f172a",
+                p: 0,
+              }}
+            >
+              ☰
+            </Button>
+
+            <Box
+              component="img"
+              src="/codebase-rag-logoWithText.png"
+              alt="CodeBase RAG"
+              sx={{
+                width: { xs: "190px", md: "260px" },
+                height: { xs: "42px", md: "52px" },
+                objectFit: "contain",
+                objectPosition: "left center",
+                display: "block",
+              }}
+            />
           </Box>
 
           {/* CHAT */}
