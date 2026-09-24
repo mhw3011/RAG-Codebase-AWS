@@ -14,14 +14,17 @@ const app = express();
 
 app.use(
   cors({
-    origin: "https://main.d1j71r2hhqttrr.amplifyapp.com",
-  })
+    origin: [
+      "https://main.d1j71r2hhqttrr.amplifyapp.com",
+      "http://localhost:5173",
+    ],
+  }),
 );
 app.use(express.json());
 
-app.use("/api",requireAuth, uploadRoute);
-app.use("/api",requireAuth, queryRoute);
-app.use("/api",requireAuth, filesRoute);
+app.use("/api", requireAuth, uploadRoute);
+app.use("/api", requireAuth, queryRoute);
+app.use("/api", requireAuth, filesRoute);
 
 app.get("/", (req, res) => {
   res.send("Codebase RAG running");
